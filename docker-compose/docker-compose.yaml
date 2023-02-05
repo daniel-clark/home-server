@@ -1,0 +1,72 @@
+services:
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce:latest
+    ports:
+     - 9443:9443
+    restart: always
+    volumes:
+     - /var/run/docker.sock:/var/run/docker.sock
+     - ${DOCKER_CONFIG_PATH_PORTAINER}:/data
+
+  photoprism:
+    # Photo manager with photoprism
+    container_name: photoprism
+    image: photoprism/photoprism:latest
+    depends_on:
+     - mariadb
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+    ports:
+      - 2342:2342
+    working_dir: "/photoprism"
+    volumes:
+      - ${LIBRARY_PATH_PHOTO}:/photoprism/originals
+      - ${DOWNLOAD_PATH_PHOTO}:/photoprism/import
+      - ${DOCKER_CONFIG_PATH_PHOTOPRISM}/storage:/photoprism/storage
+    environment:
+      PHOTOPRISM_ADMIN_USER: "${PHOTO_PRISM_ADMIN_USER}"
+      PHOTOPRISM_ADMIN_PASSWORD: "${PHOTOPRISM_ADMIN_PASSWORD}"
+      PHOTOPRISM_AUTH_MODE: "password"
+      PHOTOPRISM_ORIGINALS_LIMIT: "${PHOTOPRISM_ORIGINALS_LIMIT}"
+      PHOTOPRISM_HTTP_COMPRESSION: "gzip"
+      PHOTOPRISM_LOG_LEVEL: "${PHOTOPRISM_LOG_LEVEL}"
+      PHOTOPRISM_READONLY: "false"
+      PHOTOPRISM_EXPERIMENTAL: "false"
+      PHOTOPRISM_DISABLE_CHOWN: "false"
+      PHOTOPRISM_DISABLE_WEBDAV: "false"
+      PHOTOPRISM_DISABLE_SETTINGS: "false"
+      PHOTOPRISM_DISABLE_TENSORFLOW: "${PHOTOPRISM_DISABLE_TENSORFLOW}"
+      PHOTOPRISM_RAW_PRESETS: "false"
+      PHOTOPRISM_JPEG_QUALITY: 85
+      PHOTOPRISM_DETECT_NSFW: "false"
+      PHOTOPRISM_DATABASE_DRIVER: "${PHOTOPRISM_DATABASE_DRIVER}"
+      PHOTOPRISM_DATABASE_SERVER: "${PHOTOPRISM_DATABASE_SERVER}"
+      PHOTOPRISM_DATABASE_NAME: "photoprism"
+      PHOTOPRISM_DATABASE_USER: "photoprism"
+      PHOTOPRISM_DATABASE_PASSWORD: "photoprism"
+      PHOTOPRISM_SITE_CAPTION: "${PHOTOPRISM_SITE_CAPTION}"
+      PHOTOPRISM_SITE_DESCRIPTION: "${PHOTOPRISM_SITE_DESCRIPTION}"
+      PHOTOPRISM_SITE_AUTHOR: "${PHOTOPRISM_SITE_AUTHOR}"
+
+  mariadb:
+    # metadata storage for photoprism
+    container_name: mariadb
+    restart: unless-stopped
+    image: mariadb:latest
+    security_opt: # see https://github.com/MariaDB/mariadb-docker/issues/434#issuecomment-1136151239
+      - seccomp:unconfined
+      - apparmor:unconfined
+    command: mysqld --port=3306 --innodb-buffer-pool-size=512M --transaction-isolation=READ-COMMITTED --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max-connections=512 --innodb-rollback-on-timeout=OFF --innodb-lock-wait-timeout=120
+    expose:
+     - 3306
+    volumes:
+      - ${DOCKER_CONFIG_PATH_MARIADB}:/var/lib/mysql
+    environment:
+      MARIADB_AUTO_UPGRADE: ${MARIADB_AUTO_UPGRADE}
+      MARIADB_INITDB_SKIP_TZINFO: "${MARIADB_INITDB_SKIP_TZINFO}"
+      MARIADB_ROOT_PASSWORD: "${MARIADB_ROOT_PASSWORD}"
+      MARIADB_DATABASE: "photoprism"
+      MARIADB_USER: "photoprism"
+      MARIADB_PASSWORD: "photoprism"

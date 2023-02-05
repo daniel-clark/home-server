@@ -1,0 +1,6 @@
+version: '3.3'
+services:
+  portainer:
+    container_name: portainer
+    hostname: portainer
+    image "cr.portainer.io/portainer/portainer-ce:latest"
